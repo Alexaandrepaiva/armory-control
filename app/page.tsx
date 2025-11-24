@@ -42,21 +42,23 @@ export default function Home() {
       <ArmoryHeader />
 
       <main className="flex flex-1 flex-col px-8 py-6">
-        <section className="flex flex-1 flex-col rounded-md border border-gray-500 bg-gray-100 p-4">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold">Empréstimos em andamento</h2>
-            <p className="text-sm text-gray-500">
-              Registre a saída e devolução de itens da armaria.
-            </p>
+        <section className="flex flex-1 flex-col gap-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold">Empréstimos em andamento</h2>
+              <p className="text-sm text-gray-600">
+                Registre a saída e devolução de itens da armaria.
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-start gap-3">
+              <ReturnLoanDialog onSuccess={fetchLoans} />
+              <NewLoanDialog onSuccess={fetchLoans} />
+            </div>
           </div>
 
           <div className="flex-1 overflow-auto">
             <LoansTable loans={loans} />
-          </div>
-
-          <div className="mt-4 flex justify-end gap-3">
-            <ReturnLoanDialog onSuccess={fetchLoans} />
-            <NewLoanDialog onSuccess={fetchLoans} />
           </div>
         </section>
       </main>
