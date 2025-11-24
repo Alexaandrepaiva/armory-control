@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { connectToDatabase, Loan } from '@/lib/mongoose'
+import { Admin, Loan, connectToDatabase } from '@/lib/mongoose'
+
+export async function GET() {
+  try {
+    await connectToDatabase()
+
+    const loans = await Loan.find().sort({ sequenceNumber: -1 }).lean()
+
+    return NextResponse.json({ success: true, loans }, { status: 200 })
+  }
+  catch (error) {
+    console.error('Erro ao listar empréstimos', error)
+
+    return NextResponse.json(
+      { success: false, error: 'Erro interno ao listar empréstimos.' },
+      { status: 500 },
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,31 +28,45 @@ export async function POST(request: NextRequest) {
 
     const {
       armt,
-      numeroArmt,
-      postoGrad,
-      nomeMilitar,
-      destino,
+      armtNumber,
+      rank,
+      soldierName,
+      destination,
     }: {
       armt: string
-      numeroArmt: string
-      postoGrad: string
-      nomeMilitar: string
-      destino: string
+      armtNumber: string
+      rank: string
+      soldierName: string
+      destination: string
     } = body
 
-    if (!armt || !numeroArmt || !nomeMilitar)
+    if (!armt || !armtNumber || !soldierName)
       return NextResponse.json(
         { success: false, error: 'Dados obrigatórios ausentes.' },
         { status: 400 },
       )
+    
+    const admin = await Admin.findOneAndUpdate(
+      {},
+      {
+        $inc: { itemsLoanedCount: 1 },
+        $setOnInsert: { password: 'changeme' },
+      },
+      {
+        new: true,
+        upsert: true,
+      },
+    )
 
-    const borrowerName = [postoGrad, nomeMilitar].filter(Boolean).join(' ')
+    const nextSequenceNumber = admin.itemsLoanedCount
 
     const loan = await Loan.create({
-      itemId: numeroArmt,
-      itemName: armt,
-      borrowerName,
-      destination: destino,
+      armt,
+      armtNumber,
+      rank,
+      soldierName,
+      destination,
+      sequenceNumber: nextSequenceNumber,
       borrowedAt: new Date(),
     })
 
@@ -49,5 +81,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
 

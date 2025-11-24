@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,10 +14,60 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+
+type Loan = {
+  _id: string
+  armt: string
+  armtNumber: string
+  rank?: string
+  soldierName: string
+  destination?: string
+  sequenceNumber: number
+  borrowedAt?: string
+}
 
 export default function Home() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loans, setLoans] = useState<Loan[]>([])
+
+  async function fetchLoans() {
+    try {
+      const response = await fetch("/api/loans")
+
+      if (!response.ok)
+        return
+
+      const data = await response.json()
+
+      if (!data?.success || !Array.isArray(data.loans))
+        return
+
+      setLoans(data.loans)
+    }
+    catch {
+    }
+  }
+
+  useEffect(() => {
+    fetchLoans()
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -26,13 +76,13 @@ export default function Home() {
 
     const payload = {
       armt: String(formData.get("armt") ?? "").trim(),
-      numeroArmt: String(formData.get("numeroArmt") ?? "").trim(),
-      postoGrad: String(formData.get("postoGrad") ?? "").trim(),
-      nomeMilitar: String(formData.get("nomeMilitar") ?? "").trim(),
-      destino: String(formData.get("destino") ?? "").trim(),
+      armtNumber: String(formData.get("armtNumber") ?? "").trim(),
+      rank: String(formData.get("rank") ?? "").trim(),
+      soldierName: String(formData.get("soldierName") ?? "").trim(),
+      destination: String(formData.get("destination") ?? "").trim(),
     }
 
-    if (!payload.armt || !payload.numeroArmt || !payload.nomeMilitar)
+    if (!payload.armt || !payload.armtNumber || !payload.soldierName)
       return
 
     try {
@@ -51,6 +101,7 @@ export default function Home() {
 
       form.reset()
       setIsDialogOpen(false)
+      fetchLoans()
     }
     finally {
       setIsSubmitting(false)
@@ -82,40 +133,79 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-500 bg-green-900 text-gray-100">
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Item
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Número de série
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Militar responsável
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Data de retirada
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Data de devolução
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
-                    Situação
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-500">
-                  <td
-                    className="px-3 py-4 text-sm text-gray-500"
-                    colSpan={6}
-                  >
-                    Nenhum empréstimo registrado.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {loans.length === 0 ? (
+              <Empty className="border border-gray-500 bg-gray-100/60">
+                <EmptyHeader>
+                  <EmptyTitle className="text-green-900 font-bold">
+                    Nenhum armamento cautelado
+                  </EmptyTitle>
+                  <EmptyDescription className="text-gray-500">
+                    Utilize o botão <span className="font-semibold">“Cautelar Armt”</span> para
+                    registrar o primeiro empréstimo da armaria.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <Table className="border-collapse">
+                <TableHeader>
+                  <TableRow className="border-b border-gray-500 bg-green-900 text-gray-100">
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      Sequência
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      Data
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      Armt
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      Número Armt
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      P/Grad
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide w-2/5">
+                      Nome do Militar
+                    </TableHead>
+                    <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      Destino
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loans.map((loan) => (
+                    <TableRow
+                      key={loan._id}
+                      className="border-b border-gray-500"
+                    >
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.sequenceNumber}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.borrowedAt
+                          ? new Date(loan.borrowedAt).toLocaleDateString("pt-BR")
+                          : ""}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.armt}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.armtNumber}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.rank}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.soldierName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        {loan.destination}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
 
           <div className="mt-4 flex justify-end gap-3">
@@ -144,37 +234,37 @@ export default function Home() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="numeroArmt">Número Armt</Label>
+                    <Label htmlFor="armtNumber">Número Armt</Label>
                     <Input
-                      id="numeroArmt"
-                      name="numeroArmt"
+                      id="armtNumber"
+                      name="armtNumber"
                       className="border-gray-500"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="postoGrad">P/Grad</Label>
+                    <Label htmlFor="rank">P/Grad</Label>
                     <Input
-                      id="postoGrad"
-                      name="postoGrad"
+                      id="rank"
+                      name="rank"
                       className="border-gray-500"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="nomeMilitar">Nome do Militar</Label>
+                    <Label htmlFor="soldierName">Nome do Militar</Label>
                     <Input
-                      id="nomeMilitar"
-                      name="nomeMilitar"
+                      id="soldierName"
+                      name="soldierName"
                       className="border-gray-500"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="destino">Destino</Label>
+                    <Label htmlFor="destination">Destino</Label>
                     <Input
-                      id="destino"
-                      name="destino"
+                      id="destination"
+                      name="destination"
                       className="border-gray-500"
                     />
                   </div>
@@ -191,7 +281,7 @@ export default function Home() {
                 </form>
               </DialogContent>
             </Dialog>
-          </div>
+        </div>
         </section>
       </main>
 

@@ -6,25 +6,29 @@ if (!mongoDbUri)
   throw new Error('MONGODB_URI environment variable is not defined')
 
 interface LoanDocument extends Document {
-  itemId: string
-  itemName?: string
-  borrowerName?: string
+  armt: string
+  armtNumber: string
+  rank?: string
+  soldierName: string
   destination?: string
+  sequenceNumber: number
   borrowedAt: Date
   returnedAt?: Date | null
 }
 
 interface AdminDocument extends Document {
-  passwordHash: string
+  password: string
   itemsLoanedCount: number
 }
 
 const loanSchema = new Schema<LoanDocument>(
   {
-    itemId: { type: String, required: true },
-    itemName: { type: String },
-    borrowerName: { type: String },
+    armt: { type: String, required: true },
+    armtNumber: { type: String, required: true },
+    rank: { type: String },
+    soldierName: { type: String, required: true },
     destination: { type: String },
+    sequenceNumber: { type: Number, required: true },
     borrowedAt: { type: Date, required: true, default: Date.now },
     returnedAt: { type: Date, default: null },
   },
@@ -35,7 +39,7 @@ const loanSchema = new Schema<LoanDocument>(
 
 const adminSchema = new Schema<AdminDocument>(
   {
-    passwordHash: { type: String, required: true },
+    password: { type: String, required: true },
     itemsLoanedCount: { type: Number, required: true, default: 0 },
   },
   {
@@ -66,18 +70,23 @@ export async function connectToDatabase() {
   if (cached?.conn)
     return cached.conn
 
-  if (!cached?.promise) {
-    cached!.promise = mongoose.connect(mongoDbUri).then(() => mongoose)
-  }
+  if (!cached?.promise)
+    cached!.promise = mongoose.connect(mongoDbUri as string).then(() => mongoose)
 
   cached!.conn = await cached!.promise
   return cached!.conn
 }
 
+if (mongoose.models.Loan)
+  delete mongoose.models.Loan
+
+if (mongoose.models.Admin)
+  delete mongoose.models.Admin
+
 export const Loan: Model<LoanDocument> =
-  mongoose.models.Loan || mongoose.model<LoanDocument>('Loan', loanSchema)
+  mongoose.model<LoanDocument>('Loan', loanSchema)
 
 export const Admin: Model<AdminDocument> =
-  mongoose.models.Admin || mongoose.model<AdminDocument>('Admin', adminSchema)
+  mongoose.model<AdminDocument>('Admin', adminSchema)
 
 
