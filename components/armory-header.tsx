@@ -20,13 +20,13 @@ export function ArmoryHeader() {
         <div className="order-3 w-full text-center md:order-2 md:w-auto">
           <h1 className="text-xl font-semibold tracking-tight">17 BLog Sl</h1>
           <p className="text-sm text-gray-100/80">
-            Controle da reserva se armamento
+            Controle da Reserva de Armamento
           </p>
         </div>
 
         <div className="order-2 flex basis-1/3 justify-start md:order-3 md:basis-auto md:justify-end">
           <Image
-            src="/IME.png"
+            src="/ime-gpt-edit-removebg-preview.png"
             alt="Insígnia do IME"
             width={56}
             height={56}

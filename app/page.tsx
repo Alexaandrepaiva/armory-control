@@ -58,7 +58,7 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            <LoansTable loans={loans} />
+            <LoansTable loans={loans} onRefresh={fetchLoans} />
           </div>
         </section>
       </main>

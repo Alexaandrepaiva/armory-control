@@ -32,15 +32,17 @@ export async function POST(request: NextRequest) {
       rank,
       soldierName,
       destination,
+      isFieldActivity,
     }: {
       armt: string
       armtNumber: string
       rank: string
       soldierName: string
       destination: string
+      isFieldActivity?: boolean
     } = body
 
-    if (!armt || !armtNumber || !soldierName)
+    if (!armt || !armtNumber || !soldierName || !rank)
       return NextResponse.json(
         { success: false, error: 'Dados obrigatórios ausentes.' },
         { status: 400 },
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
       rank,
       soldierName,
       destination,
+      isFieldActivity: Boolean(isFieldActivity),
       sequenceNumber: nextSequenceNumber,
       borrowedAt: new Date(),
     })
