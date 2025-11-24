@@ -25,6 +25,7 @@ export type Loan = {
   sequenceNumber: number
   borrowedAt?: string
   returnedAt?: string
+  isFieldActivity?: boolean
 }
 
 type LoansTableProps = {
@@ -82,40 +83,44 @@ export function LoansTable({ loans }: LoansTableProps) {
         <TableBody>
           {loans.map((loan) => {
             const isReturned = Boolean(loan.returnedAt)
-            const textColorClass = isReturned ? "text-gray-500" : "text-gray-900"
+            const isFieldActivity = Boolean(loan.isFieldActivity)
+            const returnedDecorationClass = isReturned
+              ? "line-through decoration-gray-500"
+              : ""
+            const rowBackgroundClass = isFieldActivity
+              ? "bg-green-200 hover:bg-green-200/90"
+              : "bg-gray-50/60 odd:bg-gray-50/80 even:bg-white/95 hover:bg-green-50/80"
 
             return (
               <TableRow
                 key={loan._id}
-                className="border-gray-200/80 bg-gray-50/60 odd:bg-gray-50/80 even:bg-white/95 hover:bg-green-50/80 transition-colors"
+                className={`border-gray-200/80 transition-colors ${rowBackgroundClass}`}
               >
-                <TableCell className={`px-3 py-2 text-sm font-medium ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm font-medium text-gray-900 ${returnedDecorationClass}`}>
                   {loan.sequenceNumber}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.borrowedAt
                     ? new Date(loan.borrowedAt).toLocaleDateString("pt-BR")
                     : ""}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.armt}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.armtNumber}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.rank}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.soldierName}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-gray-900 ${returnedDecorationClass}`}>
                   {loan.destination ? (
                     <Badge
                       variant="outline"
-                      className={`border-green-900/30 bg-green-50/70 text-[11px] font-medium uppercase tracking-[0.08em] ${
-                        isReturned ? "text-gray-500 border-gray-400/50 bg-gray-50/80" : "text-green-900"
-                      }`}
+                      className={`border-green-900/30 bg-green-50/70 text-[11px] font-medium uppercase tracking-[0.08em] text-green-900 ${returnedDecorationClass}`}
                     >
                       {loan.destination}
                     </Badge>
@@ -123,7 +128,7 @@ export function LoansTable({ loans }: LoansTableProps) {
                     "-"
                   )}
                 </TableCell>
-                <TableCell className={`px-3 py-2 text-sm text-center ${textColorClass}`}>
+                <TableCell className={`px-3 py-2 text-sm text-center text-gray-900 ${returnedDecorationClass}`}>
                   <Checkbox
                     checked={isReturned}
                     disabled

@@ -14,6 +14,7 @@ interface LoanDocument extends Document {
   sequenceNumber: number
   borrowedAt: Date
   returnedAt?: Date | null
+  isFieldActivity?: boolean
 }
 
 interface AdminDocument extends Document {
@@ -31,6 +32,7 @@ const loanSchema = new Schema<LoanDocument>(
     sequenceNumber: { type: Number, required: true },
     borrowedAt: { type: Date, required: true, default: Date.now },
     returnedAt: { type: Date, default: null },
+    isFieldActivity: { type: Boolean, default: false },
   },
   {
     timestamps: true,
