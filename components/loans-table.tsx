@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import {
   Select,
   SelectContent,
@@ -56,6 +64,8 @@ type LoansTableProps = {
 }
 
 export function LoansTable({ loans, onRefresh }: LoansTableProps) {
+  const pageSize = 15
+
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -70,6 +80,19 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
   const [editSoldierName, setEditSoldierName] = useState("")
   const [editDestination, setEditDestination] = useState("")
   const [editIsFieldActivity, setEditIsFieldActivity] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(loans.length / pageSize))
+
+    if (currentPage > totalPages)
+      setCurrentPage(totalPages)
+  }, [loans.length, currentPage, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(loans.length / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedLoans = loans.slice(startIndex, endIndex)
 
   function handleRowClick(loan: Loan) {
     setSelectedLoan(loan)
@@ -225,7 +248,7 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loans.map((loan) => {
+          {paginatedLoans.map((loan) => {
             const isReturned = Boolean(loan.returnedAt)
             const isFieldActivity = Boolean(loan.isFieldActivity)
             const returnedDecorationClass = isReturned
@@ -285,6 +308,69 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
           })}
         </TableBody>
       </Table>
+
+      <div className="flex items-center justify-between border-t border-gray-200/80 bg-gray-50/70 px-4 py-2 text-xs text-gray-600">
+        <span>
+          Mostrando{" "}
+          <span className="font-semibold text-green-900">
+            {loans.length === 0 ? 0 : startIndex + 1}
+          </span>{" "}
+          -{" "}
+          <span className="font-semibold text-green-900">
+            {Math.min(endIndex, loans.length)}
+          </span>{" "}
+          de{" "}
+          <span className="font-semibold text-green-900">{loans.length}</span>{" "}
+          registros
+        </span>
+
+        <Pagination className="w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                aria-disabled={currentPage === 1}
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage > 1)
+                    setCurrentPage(currentPage - 1)
+                }}
+              />
+            </PaginationItem>
+
+            {Array.from({ length: totalPages }, (_, index) => {
+              const page = index + 1
+
+              return (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    isActive={page === currentPage}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      setCurrentPage(page)
+                    }}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            })}
+
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                aria-disabled={currentPage === totalPages}
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage < totalPages)
+                    setCurrentPage(currentPage + 1)
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
 
       <Dialog
         open={isPasswordDialogOpen && Boolean(selectedLoan)}
