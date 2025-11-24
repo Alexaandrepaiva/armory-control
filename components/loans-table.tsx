@@ -1,3 +1,7 @@
+"use client"
+
+import { useState, type FormEvent } from "react"
+
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -6,6 +10,24 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -30,9 +52,131 @@ export type Loan = {
 
 type LoansTableProps = {
   loans: Loan[]
+  onRefresh?: () => void
 }
 
-export function LoansTable({ loans }: LoansTableProps) {
+export function LoansTable({ loans, onRefresh }: LoansTableProps) {
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [adminPassword, setAdminPassword] = useState("")
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
+  const [isUpdatingLoan, setIsUpdatingLoan] = useState(false)
+
+  const [editArmt, setEditArmt] = useState("")
+  const [editArmtNumber, setEditArmtNumber] = useState("")
+  const [editRank, setEditRank] = useState("")
+  const [editSoldierName, setEditSoldierName] = useState("")
+  const [editDestination, setEditDestination] = useState("")
+  const [editIsFieldActivity, setEditIsFieldActivity] = useState(false)
+
+  function handleRowClick(loan: Loan) {
+    setSelectedLoan(loan)
+    setAdminPassword("")
+    setPasswordError(null)
+    setIsPasswordDialogOpen(true)
+  }
+
+  async function handleVerifyPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!adminPassword.trim()) {
+      setPasswordError("Informe a senha de administrador.")
+      return
+    }
+
+    try {
+      setIsVerifyingPassword(true)
+      setPasswordError(null)
+
+      const response = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password: adminPassword.trim() }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        if (data?.error)
+          setPasswordError(data.error)
+        else
+          setPasswordError("Não foi possível verificar a senha.")
+
+        return
+      }
+
+      if (!selectedLoan)
+        return
+
+      setEditArmt(selectedLoan.armt)
+      setEditArmtNumber(selectedLoan.armtNumber)
+      setEditRank(selectedLoan.rank ?? "")
+      setEditSoldierName(selectedLoan.soldierName)
+      setEditDestination(selectedLoan.destination ?? "")
+      setEditIsFieldActivity(Boolean(selectedLoan.isFieldActivity))
+
+      setIsPasswordDialogOpen(false)
+      setIsEditDialogOpen(true)
+    }
+    finally {
+      setIsVerifyingPassword(false)
+    }
+  }
+
+  async function handleUpdateLoan(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!selectedLoan)
+      return
+
+    const payload = {
+      sequenceNumber: selectedLoan.sequenceNumber,
+      password: adminPassword.trim(),
+      armt: editArmt.trim(),
+      armtNumber: editArmtNumber.trim(),
+      rank: editRank.trim(),
+      soldierName: editSoldierName.trim(),
+      destination: editDestination.trim(),
+      isFieldActivity: editIsFieldActivity,
+    }
+
+    if (
+      !payload.armt
+      || !payload.armtNumber
+      || !payload.soldierName
+      || !payload.rank
+    )
+      return
+
+    try {
+      setIsUpdatingLoan(true)
+
+      const response = await fetch("/api/loans/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success)
+        return
+
+      setIsEditDialogOpen(false)
+      if (typeof onRefresh === "function")
+        onRefresh()
+    }
+    finally {
+      setIsUpdatingLoan(false)
+    }
+  }
+
   if (loans.length === 0) {
     return (
       <Empty className="border border-gray-500/70 bg-gray-100/70 shadow-sm">
@@ -94,7 +238,8 @@ export function LoansTable({ loans }: LoansTableProps) {
             return (
               <TableRow
                 key={loan._id}
-                className={`border-gray-200/80 transition-colors ${rowBackgroundClass}`}
+                className={`border-gray-200/80 transition-colors cursor-pointer ${rowBackgroundClass}`}
+                onClick={() => handleRowClick(loan)}
               >
                 <TableCell className={`px-3 py-2 text-sm font-medium text-gray-900 ${returnedDecorationClass}`}>
                   {loan.sequenceNumber}
@@ -140,6 +285,170 @@ export function LoansTable({ loans }: LoansTableProps) {
           })}
         </TableBody>
       </Table>
+
+      <Dialog
+        open={isPasswordDialogOpen && Boolean(selectedLoan)}
+        onOpenChange={(open) => {
+          setIsPasswordDialogOpen(open)
+          if (!open)
+            setPasswordError(null)
+        }}
+      >
+        <DialogContent className="border-gray-500 bg-gray-100">
+          <DialogHeader>
+            <DialogTitle>Editar registro</DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Informe a senha de administrador para editar este empréstimo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleVerifyPassword} className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="adminPassword">Senha de administrador</Label>
+              <Input
+                id="adminPassword"
+                type="password"
+                value={adminPassword}
+                onChange={(event) => setAdminPassword(event.target.value)}
+                className="border-gray-500"
+              />
+            </div>
+
+            {passwordError && (
+              <p className="text-sm font-semibold text-green-900">
+                {passwordError}
+              </p>
+            )}
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="submit"
+                className="bg-green-900 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-green-900/90 cursor-pointer"
+                disabled={isVerifyingPassword}
+              >
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isEditDialogOpen && Boolean(selectedLoan)}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+        }}
+      >
+        <DialogContent className="border-gray-500 bg-gray-100">
+          <DialogHeader>
+            <DialogTitle>Editar empréstimo</DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Atualize os dados do armamento cautelado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateLoan} className="space-y-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 md:flex-row">
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor="editArmt">Armt</Label>
+                  <Input
+                    id="editArmt"
+                    value={editArmt}
+                    onChange={(event) => setEditArmt(event.target.value)}
+                    className="border-gray-500"
+                  />
+                </div>
+
+                <div className="w-full space-y-1.5 md:w-1/4">
+                  <Label htmlFor="editArmtNumber">Número Armt</Label>
+                  <Input
+                    id="editArmtNumber"
+                    value={editArmtNumber}
+                    onChange={(event) => setEditArmtNumber(event.target.value)}
+                    className="border-gray-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 md:flex-row">
+                <div className="w-full space-y-1.5 md:w-1/4">
+                  <Label htmlFor="editRank">P/Grad</Label>
+                  <Select
+                    value={editRank}
+                    onValueChange={setEditRank}
+                  >
+                    <SelectTrigger className="w-full border-gray-500">
+                      <SelectValue placeholder="Selecione a graduação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sd">Sd</SelectItem>
+                      <SelectItem value="Cb">Cb</SelectItem>
+                      <SelectItem value="3o Sgt">3o Sgt</SelectItem>
+                      <SelectItem value="2o Sgt">2o Sgt</SelectItem>
+                      <SelectItem value="1o Sgt">1o Sgt</SelectItem>
+                      <SelectItem value="ST">ST</SelectItem>
+                      <SelectItem value="Asp Of">Asp Of</SelectItem>
+                      <SelectItem value="2o Ten">2o Ten</SelectItem>
+                      <SelectItem value="1o Ten">1o Ten</SelectItem>
+                      <SelectItem value="Cap">Cap</SelectItem>
+                      <SelectItem value="Maj">Maj</SelectItem>
+                      <SelectItem value="TC">TC</SelectItem>
+                      <SelectItem value="Cel">Cel</SelectItem>
+                      <SelectItem value="Gen">Gen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor="editSoldierName">Nome do Militar</Label>
+                  <Input
+                    id="editSoldierName"
+                    value={editSoldierName}
+                    onChange={(event) => setEditSoldierName(event.target.value)}
+                    className="border-gray-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="editDestination">Destino</Label>
+                <Input
+                  id="editDestination"
+                  value={editDestination}
+                  onChange={(event) => setEditDestination(event.target.value)}
+                  className="border-gray-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox
+                  id="editIsFieldActivity"
+                  checked={editIsFieldActivity}
+                  onCheckedChange={(checked) => setEditIsFieldActivity(Boolean(checked))}
+                  className="data-[state=checked]:bg-green-900 data-[state=checked]:border-green-900"
+                />
+                <Label
+                  htmlFor="editIsFieldActivity"
+                  className="text-sm text-gray-700"
+                >
+                  Atividade de campo
+                </Label>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="submit"
+                className="bg-green-900 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-green-900/90 cursor-pointer"
+                disabled={isUpdatingLoan}
+              >
+                Confirmar edição
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
