@@ -9,6 +9,7 @@ interface LoanDocument extends Document {
   itemId: string
   itemName?: string
   borrowerName?: string
+  destination?: string
   borrowedAt: Date
   returnedAt?: Date | null
 }
@@ -23,6 +24,7 @@ const loanSchema = new Schema<LoanDocument>(
     itemId: { type: String, required: true },
     itemName: { type: String },
     borrowerName: { type: String },
+    destination: { type: String },
     borrowedAt: { type: Date, required: true, default: Date.now },
     returnedAt: { type: Date, default: null },
   },
