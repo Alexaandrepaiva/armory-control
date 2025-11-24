@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -24,10 +25,8 @@ import {
 } from "@/components/ui/table"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
 
@@ -40,11 +39,15 @@ type Loan = {
   destination?: string
   sequenceNumber: number
   borrowedAt?: string
+  returnedAt?: string
 }
 
 export default function Home() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false)
+  const [isReturnSubmitting, setIsReturnSubmitting] = useState(false)
+  const [returnError, setReturnError] = useState<string | null>(null)
   const [loans, setLoans] = useState<Loan[]>([])
 
   async function fetchLoans() {
@@ -105,6 +108,62 @@ export default function Home() {
     }
     finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleReturnSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setReturnError(null)
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const sequenceNumberRaw = String(formData.get("sequenceNumber") ?? "").trim()
+    const password = String(formData.get("password") ?? "").trim()
+
+    if (!sequenceNumberRaw || !password) {
+      setReturnError("Preencha todos os campos.")
+      return
+    }
+
+    const sequenceNumber = Number(sequenceNumberRaw)
+
+    if (Number.isNaN(sequenceNumber)) {
+      setReturnError("Número de sequência inválido.")
+      return
+    }
+
+    try {
+      setIsReturnSubmitting(true)
+
+      const response = await fetch("/api/loans", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sequenceNumber, password }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        if (data?.error === "Senha incorreta")
+          setReturnError("Senha incorreta")
+        else if (data?.error)
+          setReturnError(data.error)
+        else
+          setReturnError("Erro ao confirmar recebimento.")
+
+        return
+      }
+
+      form.reset()
+      setIsReturnDialogOpen(false)
+      setReturnError(null)
+      fetchLoans()
+    }
+    finally {
+      setIsReturnSubmitting(false)
     }
   }
 
@@ -170,6 +229,9 @@ export default function Home() {
                     <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
                       Destino
                     </TableHead>
+                  <TableHead className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-center">
+                    Recebido
+                  </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -201,6 +263,13 @@ export default function Home() {
                       <TableCell className="px-3 py-2 text-sm text-gray-900">
                         {loan.destination}
                       </TableCell>
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 text-center">
+                        <Checkbox
+                          checked={Boolean(loan.returnedAt)}
+                          disabled
+                          className="data-[state=checked]:bg-green-900 data-[state=checked]:border-green-900"
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -209,9 +278,66 @@ export default function Home() {
           </div>
 
           <div className="mt-4 flex justify-end gap-3">
-            <Button className="bg-green-600 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-green-900 cursor-pointer">
-              Registrar devolução
-            </Button>
+            <Dialog
+              open={isReturnDialogOpen}
+              onOpenChange={(open) => {
+                setIsReturnDialogOpen(open)
+                if (!open)
+                  setReturnError(null)
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="border border-green-900 bg-transparent px-4 py-2 text-sm font-semibold text-green-900 hover:bg-green-900/5 cursor-pointer">
+                  Devolver Armt
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="border-gray-500 bg-gray-100">
+                <DialogHeader>
+                  <DialogTitle>Devolução de armamento</DialogTitle>
+                  <DialogDescription className="text-gray-500">
+                    Informe o número de sequência do empréstimo e a senha para
+                    confirmar o recebimento do armamento.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleReturnSubmit} className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="sequenceNumber">Número de Sequência</Label>
+                    <Input
+                      id="sequenceNumber"
+                      name="sequenceNumber"
+                      className="border-gray-500"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      className="border-gray-500"
+                    />
+                  </div>
+
+                  {returnError && (
+                    <p className="text-sm font-semibold text-green-900">
+                      {returnError}
+                    </p>
+                  )}
+
+                  <DialogFooter className="pt-2">
+                    <Button
+                      type="submit"
+                      className="bg-green-900 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-green-900/90 cursor-pointer"
+                      disabled={isReturnSubmitting}
+                    >
+                      Confirmar Recebimento
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
