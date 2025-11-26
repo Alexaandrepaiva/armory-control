@@ -41,9 +41,19 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       )
 
-    const admin = await Admin.findOne().select('password')
+    const admin = await Admin.findOne().select('passwords password')
 
-    if (!admin || admin.password !== password)
+    if (!admin)
+      return NextResponse.json(
+        { success: false, error: 'Senha incorreta' },
+        { status: 401 },
+      )
+
+    const hasValidPassword = Array.isArray(admin.passwords)
+      && admin.passwords.some((entry) => entry.password === password)
+      || (!admin.passwords?.length && admin.password === password)
+
+    if (!hasValidPassword)
       return NextResponse.json(
         { success: false, error: 'Senha incorreta' },
         { status: 401 },

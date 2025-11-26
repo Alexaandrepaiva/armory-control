@@ -32,9 +32,11 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [rank, setRank] = useState("")
   const [isFieldActivity, setIsFieldActivity] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setPasswordError(null)
     const form = event.currentTarget
     const formData = new FormData(form)
 
@@ -45,6 +47,7 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
       soldierName: String(formData.get("soldierName") ?? "").trim(),
       destination: String(formData.get("destination") ?? "").trim(),
       isFieldActivity,
+      password: String(formData.get("password") ?? "").trim(),
     }
 
     if (
@@ -52,6 +55,7 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
       || !payload.armtNumber
       || !payload.soldierName
       || !payload.rank
+      || !payload.password
     )
       return
 
@@ -66,8 +70,16 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok)
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        if (data?.error === "Senha incorreta")
+          setPasswordError("Senha incorreta")
+        else if (data?.error)
+          setPasswordError(data.error)
+
         return
+      }
 
       form.reset()
       setRank("")
@@ -168,6 +180,16 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                className="border-gray-500"
+              />
+            </div>
+
             <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="isFieldActivity"
@@ -183,6 +205,12 @@ export function NewLoanDialog({ onSuccess }: NewLoanDialogProps) {
               </Label>
             </div>
           </div>
+
+          {passwordError && (
+            <p className="text-sm font-semibold text-green-900">
+              {passwordError}
+            </p>
+          )}
 
           <DialogFooter className="pt-2">
             <Button
