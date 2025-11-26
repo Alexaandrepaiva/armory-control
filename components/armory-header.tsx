@@ -8,7 +8,7 @@ export function ArmoryHeader() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-3 px-4 py-3 md:flex-nowrap md:justify-between">
         <div className="order-1 flex basis-1/3 justify-end md:order-1 md:basis-auto md:justify-start">
           <Image
-            src="/Símbolo_Blog-removebg-preview.png"
+            src="https://p345cdotr9.ufs.sh/f/BNJxUdRM2uoi7koElMwSW0GbzOH531AUfQ64TlcIa2XNPj9Y"
             alt="Símbolo do 17 Blog Sl"
             width={56}
             height={56}
@@ -26,7 +26,7 @@ export function ArmoryHeader() {
 
         <div className="order-2 flex basis-1/3 justify-start md:order-3 md:basis-auto md:justify-end">
           <Image
-            src="/ime-gpt-edit-removebg-preview.png"
+            src="https://p345cdotr9.ufs.sh/f/BNJxUdRM2uoiUgtLlmMhV0bxATWnqOMPRokE6UmgctFeaD1z"
             alt="Insígnia do IME"
             width={56}
             height={56}
