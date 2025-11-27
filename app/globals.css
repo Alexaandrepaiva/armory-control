@@ -120,3 +120,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes blog-loading-zoom {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.blog-loading-zoom {
+  animation: blog-loading-zoom 2s ease-in-out infinite;
+}
+

@@ -7,12 +7,15 @@ import { ArmoryHeader } from "@/components/armory-header"
 import { LoansTable, type Loan } from "@/components/loans-table"
 import { NewLoanDialog } from "@/components/new-loan-dialog"
 import { ReturnLoanDialog } from "@/components/return-loan-dialog"
+import { LoadingState } from "@/components/loading-state"
 
 export default function Home() {
   const [loans, setLoans] = useState<Loan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   async function fetchLoans() {
     try {
+      setIsLoading(true)
       const response = await fetch("/api/loans")
 
       if (!response.ok)
@@ -26,6 +29,9 @@ export default function Home() {
       setLoans(data.loans)
     }
     catch {
+    }
+    finally {
+      setIsLoading(false)
     }
   }
 
@@ -58,7 +64,9 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            <LoansTable loans={loans} onRefresh={fetchLoans} />
+            {isLoading
+              ? <LoadingState />
+              : <LoansTable loans={loans} onRefresh={fetchLoans} />}
           </div>
         </section>
       </main>
