@@ -6,7 +6,9 @@ export async function GET() {
   try {
     await connectToDatabase()
 
-    const loans = await Loan.find().sort({ sequenceNumber: -1 }).lean()
+    const loans = await Loan.find({ deletedAt: null })
+      .sort({ sequenceNumber: -1 })
+      .lean()
 
     return NextResponse.json({ success: true, loans }, { status: 200 })
   }
@@ -176,7 +178,7 @@ export async function PATCH(request: NextRequest) {
       )
 
     const loan = await Loan.findOneAndUpdate(
-      { sequenceNumber },
+      { sequenceNumber, deletedAt: null },
       { $set: { returnedAt: new Date(), returnedByName } },
       { new: true },
     )
@@ -194,6 +196,80 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: 'Erro interno ao confirmar recebimento.' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectToDatabase()
+
+    const body = await request.json()
+
+    const {
+      sequenceNumber,
+      password,
+    }: {
+      sequenceNumber: number
+      password: string
+    } = body
+
+    if (!sequenceNumber || !password)
+      return NextResponse.json(
+        { success: false, error: 'Dados obrigatórios ausentes.' },
+        { status: 400 },
+      )
+
+    const admin = await Admin.findOne().select('passwords password itemsLoanedCount')
+
+    if (!admin)
+      return NextResponse.json(
+        { success: false, error: 'Senha incorreta' },
+        { status: 401 },
+      )
+
+    const hasValidPassword = Array.isArray(admin.passwords)
+      && admin.passwords.some((entry) => entry.password === password)
+      || (!admin.passwords?.length && admin.password === password)
+
+    if (!hasValidPassword)
+      return NextResponse.json(
+        { success: false, error: 'Senha incorreta' },
+        { status: 401 },
+      )
+
+    const loan = await Loan.findOneAndUpdate(
+      { sequenceNumber, deletedAt: null },
+      {
+        $set: {
+          armtNumber: '',
+          deletedAt: new Date(),
+        },
+      },
+      { new: true },
+    )
+
+    if (!loan)
+      return NextResponse.json(
+        { success: false, error: 'Empréstimo não encontrado.' },
+        { status: 404 },
+      )
+
+    if (admin.itemsLoanedCount > 0) {
+      await Admin.updateOne(
+        { _id: admin._id, itemsLoanedCount: { $gt: 0 } },
+        { $inc: { itemsLoanedCount: -1 } },
+      )
+    }
+
+    return NextResponse.json({ success: true, loan }, { status: 200 })
+  }
+  catch (error) {
+    console.error('Erro ao excluir empréstimo', error)
+
+    return NextResponse.json(
+      { success: false, error: 'Erro interno ao excluir empréstimo.' },
       { status: 500 },
     )
   }

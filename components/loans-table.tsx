@@ -55,6 +55,7 @@ export type Loan = {
   sequenceNumber: number
   borrowedAt?: string
   returnedAt?: string
+  deletedAt?: string
   isFieldActivity?: boolean
   responsibleName?: string
   returnedByName?: string
@@ -75,6 +76,7 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
   const [isUpdatingLoan, setIsUpdatingLoan] = useState(false)
+  const [isDeletingLoan, setIsDeletingLoan] = useState(false)
 
   const [editArmt, setEditArmt] = useState("")
   const [editArmtNumber, setEditArmtNumber] = useState("")
@@ -199,6 +201,42 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
     }
     finally {
       setIsUpdatingLoan(false)
+    }
+  }
+
+  async function handleDeleteLoan() {
+    if (!selectedLoan)
+      return
+
+    if (!adminPassword.trim())
+      return
+
+    try {
+      setIsDeletingLoan(true)
+
+      const response = await fetch("/api/loans", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sequenceNumber: selectedLoan.sequenceNumber,
+          password: adminPassword.trim(),
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success)
+        return
+
+      setIsEditDialogOpen(false)
+      setSelectedLoan(null)
+      if (typeof onRefresh === "function")
+        onRefresh()
+    }
+    finally {
+      setIsDeletingLoan(false)
     }
   }
 
@@ -531,11 +569,20 @@ export function LoansTable({ loans, onRefresh }: LoansTableProps) {
               </div>
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="flex items-center justify-between pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-red-600 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 cursor-pointer"
+                disabled={isUpdatingLoan || isDeletingLoan}
+                onClick={handleDeleteLoan}
+              >
+                Excluir registro
+              </Button>
               <Button
                 type="submit"
                 className="bg-green-900 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-green-900/90 cursor-pointer"
-                disabled={isUpdatingLoan}
+                disabled={isUpdatingLoan || isDeletingLoan}
               >
                 Confirmar edição
               </Button>
