@@ -21,7 +21,6 @@ interface AdminDocument extends Document {
   password: string
   itemsLoanedCount: number
 }
-
 const loanSchema = new Schema<LoanDocument>(
   {
     armt: { type: String, required: true },
@@ -49,34 +48,18 @@ const adminSchema = new Schema<AdminDocument>(
   },
 )
 
-type MongooseCache = {
-  conn: typeof mongoose | null
-  promise: Promise<typeof mongoose> | null
+export const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1)
+    return
+
+  await mongoose.connect(mongoDbUri as string, {
+    dbName: 'blogsi',
+  })
 }
-
-declare global {
-   
-  var mongooseCache: MongooseCache | undefined
-}
-
-const globalForMongoose = global as typeof globalThis & {
-  mongooseCache?: MongooseCache
-}
-
-let cached = globalForMongoose.mongooseCache
-
-if (!cached)
-  cached = globalForMongoose.mongooseCache = { conn: null, promise: null }
 
 export async function connectToDatabase() {
-  if (cached?.conn)
-    return cached.conn
-
-  if (!cached?.promise)
-    cached!.promise = mongoose.connect(mongoDbUri as string).then(() => mongoose)
-
-  cached!.conn = await cached!.promise
-  return cached!.conn
+  await connectDB()
+  return mongoose
 }
 
 if (mongoose.models.Loan)
