@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       soldierName,
       destination,
       isFieldActivity,
+      password,
     }: {
       armt: string
       armtNumber: string
@@ -40,19 +41,23 @@ export async function POST(request: NextRequest) {
       soldierName: string
       destination: string
       isFieldActivity?: boolean
+      password: string
     } = body
 
-    if (!armt || !armtNumber || !soldierName || !rank)
+    if (!armt || !armtNumber || !soldierName || !rank || !password)
       return NextResponse.json(
         { success: false, error: 'Dados obrigatórios ausentes.' },
         { status: 400 },
       )
-    
+
     const admin = await Admin.findOneAndUpdate(
       {},
       {
-        $inc: { itemsLoanedCount: 1 },
-        $setOnInsert: { password: 'changeme' },
+        $setOnInsert: {
+          passwords: [{ name: 'Admin', password: 'changeme' }],
+          password: 'changeme',
+          itemsLoanedCount: 0,
+        },
       },
       {
         new: true,
@@ -60,7 +65,46 @@ export async function POST(request: NextRequest) {
       },
     )
 
-    const nextSequenceNumber = admin.itemsLoanedCount
+    if (!admin)
+      return NextResponse.json(
+        { success: false, error: 'Erro interno ao obter administrador.' },
+        { status: 500 },
+      )
+
+    let responsibleName: string | null = null
+
+    if (Array.isArray(admin.passwords) && admin.passwords.length > 0) {
+      const matchedEntry = admin.passwords.find((entry) => entry.password === password)
+      if (matchedEntry)
+        responsibleName = matchedEntry.name
+    }
+    else if (admin.password === password) {
+      responsibleName = 'Admin'
+    }
+
+    if (!responsibleName)
+      return NextResponse.json(
+        { success: false, error: 'Senha incorreta' },
+        { status: 401 },
+      )
+
+    const adminWithUpdatedCount = await Admin.findOneAndUpdate(
+      { _id: admin._id },
+      {
+        $inc: { itemsLoanedCount: 1 },
+      },
+      {
+        new: true,
+      },
+    )
+
+    if (!adminWithUpdatedCount)
+      return NextResponse.json(
+        { success: false, error: 'Erro interno ao atualizar contador.' },
+        { status: 500 },
+      )
+
+    const nextSequenceNumber = adminWithUpdatedCount.itemsLoanedCount
 
     const loan = await Loan.create({
       armt,
@@ -71,6 +115,7 @@ export async function POST(request: NextRequest) {
       isFieldActivity: Boolean(isFieldActivity),
       sequenceNumber: nextSequenceNumber,
       borrowedAt: new Date(),
+      responsibleName,
     })
 
     return NextResponse.json({ success: true, loan }, { status: 201 })
@@ -105,9 +150,26 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       )
 
-    const admin = await Admin.findOne().select('password')
+    const admin = await Admin.findOne().select('passwords password')
 
-    if (!admin || admin.password !== password)
+    if (!admin)
+      return NextResponse.json(
+        { success: false, error: 'Senha incorreta' },
+        { status: 401 },
+      )
+
+    let returnedByName: string | null = null
+
+    if (Array.isArray(admin.passwords) && admin.passwords.length > 0) {
+      const matchedEntry = admin.passwords.find((entry) => entry.password === password)
+      if (matchedEntry)
+        returnedByName = matchedEntry.name
+    }
+    else if (admin.password === password) {
+      returnedByName = 'Admin'
+    }
+
+    if (!returnedByName)
       return NextResponse.json(
         { success: false, error: 'Senha incorreta' },
         { status: 401 },
@@ -115,7 +177,7 @@ export async function PATCH(request: NextRequest) {
 
     const loan = await Loan.findOneAndUpdate(
       { sequenceNumber },
-      { $set: { returnedAt: new Date() } },
+      { $set: { returnedAt: new Date(), returnedByName } },
       { new: true },
     )
 

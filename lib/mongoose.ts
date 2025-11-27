@@ -15,10 +15,18 @@ interface LoanDocument extends Document {
   borrowedAt: Date
   returnedAt?: Date | null
   isFieldActivity?: boolean
+  responsibleName?: string
+  returnedByName?: string
+}
+
+interface AdminPasswordEntry {
+  name: string
+  password: string
 }
 
 interface AdminDocument extends Document {
-  password: string
+  passwords: AdminPasswordEntry[]
+  password?: string
   itemsLoanedCount: number
 }
 const loanSchema = new Schema<LoanDocument>(
@@ -32,6 +40,8 @@ const loanSchema = new Schema<LoanDocument>(
     borrowedAt: { type: Date, required: true, default: Date.now },
     returnedAt: { type: Date, default: null },
     isFieldActivity: { type: Boolean, default: false },
+    responsibleName: { type: String },
+    returnedByName: { type: String },
   },
   {
     timestamps: true,
@@ -40,7 +50,17 @@ const loanSchema = new Schema<LoanDocument>(
 
 const adminSchema = new Schema<AdminDocument>(
   {
-    password: { type: String, required: true },
+    passwords: {
+      type: [
+        {
+          name: { type: String, required: true },
+          password: { type: String, required: true },
+        },
+      ],
+      required: true,
+      default: [],
+    },
+    password: { type: String },
     itemsLoanedCount: { type: Number, required: true, default: 0 },
   },
   {
